@@ -4,5 +4,6 @@ pydantic
 langchain-google-genai
 uvicorn
 requests
+python-multipart
 langchain
 langchain-google-genai
