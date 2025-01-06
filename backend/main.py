@@ -119,7 +119,6 @@ Codebase:
 
 Generate documentation with this structure, providing each section as a dictionary with descriptive keys and detailed values, if some section or sub-section is not applicable, 
 you can remove it and also add any additional sections if needed, make it suitable for github readme.md file, you can use appropriate styling and formatting.:
-0.Title of the project
 
 1. Overview:
 - description: Detailed project description
