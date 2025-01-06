@@ -111,61 +111,66 @@ async def generate_docs_from_url(repo_url: RepoURL):
 
 # Updated template to generate structured JSON-like output
 DOCUMENTATION_TEMPLATE = """
-You are a technical documentation expert. Analyze this codebase and generate comprehensive documentation.
-Return the documentation in a markdown format.
+You are a technical documentation expert tasked with analyzing the following codebase and generating comprehensive and well-structured documentation. Please return the documentation in **Markdown format**.
 
-Codebase:
+### Codebase:
 {codebase}
 
-Generate documentation with this structure, providing each section as a dictionary with descriptive keys and detailed values, if some section or sub-section is not applicable, 
-you can remove it and also add any additional sections if needed, make it suitable for github readme.md file, you can use appropriate styling and formatting.:
+### Documentation Structure:
 
-1. Overview:
-- description: Detailed project description
-- purpose: Main purpose of the project
-- features: List of key features and capabilities
-- audience: Target audience description
+Ensure to organize the documentation into the following sections. If a section or sub-section is not applicable to the codebase, feel free to remove it. You can also add any additional relevant sections. Use appropriate Markdown styling and formatting to ensure clarity.
 
-2. Setup Instructions:
-- prerequisites: List of prerequisites
-- installation: Step-by-step installation guide
-- configuration: Configuration details
-- environment: Environment setup instructions
-- first_run: First-time run instructions
+---
 
-3. Core Modules:
-- components: List of main components
-- relationships: Component relationships
-- functionalities: Key functionalities
-- architecture: Internal architecture details
+#### 1. **Project Overview:**
+- **Description**: Provide a detailed description of the project, including its background and context.
+- **Purpose**: State the primary goals and objectives of the project.
+- **Features**: List the key features and capabilities of the project.
+- **Target Audience**: Define who the project is intended for (e.g., developers, businesses, end users).
 
-4. API Endpoints:
-- endpoints: List of all endpoints
-- formats: Request/response formats
-- auth: Authentication methods
-- examples: Example requests
-- error_handling: Error handling details
+#### 2. **Setup Instructions:**
+- **Prerequisites**: List any software, tools, or libraries that must be installed before setting up the project.
+- **Installation**: Provide step-by-step instructions for installing the project.
+- **Configuration**: Detail any configuration settings or files that need to be modified.
+- **Environment Setup**: Explain the environment setup (e.g., development, production, etc.).
+- **First-Time Run**: Instructions on running the project for the first time, including any initial setup required.
 
-5. Usage Examples:
-- scenarios: Common use case scenarios
-- code_samples: Example code snippets
-- best_practices: Best practices list
-- tips: Usage tips and tricks
+#### 3. **Core Modules and Architecture:**
+- **Components**: List the main components of the project (e.g., services, classes, modules).
+- **Relationships**: Describe how the components interact with each other.
+- **Key Functionalities**: Highlight the main functionalities each module/component offers.
+- **Internal Architecture**: Provide details on the project's internal architecture (e.g., microservices, monolithic structure).
 
-6. Dependencies:
-- libraries: Required libraries list
-- versions: Version requirements
-- system_requirements: System prerequisites
-- services: Required external services
+#### 4. **API Endpoints:**
+- **Endpoints**: List and describe all available API endpoints.
+- **Request/Response Formats**: Explain the structure of requests and responses.
+- **Authentication**: Specify the authentication methods supported by the API.
+- **Example Requests**: Provide example API requests for better understanding.
+- **Error Handling**: Describe how errors are handled and what error messages to expect.
 
-7. Future Improvements:
-- enhancements: Potential enhancements
-- optimization: Optimization opportunities
-- planned_features: Planned features list
-- limitations: Known limitations
+#### 5. **Usage Examples:**
+- **Common Use Cases**: Outline typical scenarios for using the project.
+- **Code Samples**: Provide relevant code snippets demonstrating how to use the project.
+- **Best Practices**: List best practices for using the project efficiently and effectively.
+- **Tips and Tricks**: Offer any tips, shortcuts, or helpful advice for users.
 
-Format each section ensure all values are properly formatted in markdown.
+#### 6. **Dependencies:**
+- **Required Libraries**: List all libraries or dependencies required to run the project.
+- **Version Requirements**: Specify the version of each library or tool.
+- **System Prerequisites**: Outline the system requirements (e.g., operating system, hardware).
+- **External Services**: List any external services or APIs the project depends on.
+
+#### 7. **Future Improvements and Roadmap:**
+- **Enhancements**: Mention potential improvements or features that could be added in the future.
+- **Optimization Opportunities**: Suggest areas of the project that could be optimized for better performance or efficiency.
+- **Planned Features**: List the features that are planned for future releases.
+- **Known Limitations**: Mention any limitations or known issues that users should be aware of.
+
+---
+
+Ensure that each section is formatted clearly using **Markdown syntax** and that all the values (such as descriptions, lists, and code snippets) are well-organized and easy to read.
 """
+
 
 # Create documentation pipeline using modern approach
 documentation_prompt = PromptTemplate(
