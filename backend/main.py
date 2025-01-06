@@ -72,7 +72,7 @@ async def run_repomix(repo_url: str) -> str:
         if result.returncode != 0:
             raise RuntimeError(f"Repomix failed: {result.stderr.decode()}")
 
-        print(f"Packed codebase .txt file created at {packed_file_path}")
+        # print(f"Packed codebase .txt file created at {packed_file_path}")
 
         # Return the path to the packed .txt file
         return packed_file_path
@@ -220,7 +220,7 @@ async def process_large_codebase(codebase: str, max_chunk_size: int = 30000):
     """
     try:
         if len(codebase) <= max_chunk_size:
-            print("Processing small codebase")
+            # print("Processing small codebase")
             raw_result = await documentation_chain.ainvoke({"codebase": codebase})
             logging.info(f"LLM raw response: {raw_result}")
             # print(raw_result)
@@ -231,7 +231,7 @@ async def process_large_codebase(codebase: str, max_chunk_size: int = 30000):
         chunks = [codebase[i:i + max_chunk_size] for i in range(0, len(codebase), max_chunk_size)]
         all_docs = []
         for chunk in chunks:
-            print("Processing codebase chunk")
+            # print("Processing codebase chunk")
             raw_result = await documentation_chain.ainvoke({"codebase": chunk})
             # print(raw_result)
             logging.info(f"Chunk raw response: {raw_result}")
