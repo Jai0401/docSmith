@@ -33,7 +33,7 @@ function App() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-6">
       <header className="text-center mb-8">
-        <h1 className="text-4xl font-semibold text-blue-600">docSmith</h1>
+        <h1 className="text-4xl font-semibold text-black">docSmith</h1>
         <p className="text-lg text-gray-600">Generate documentation from a GitHub repository URL.</p>
       </header>
       <div className="w-full max-w-3xl bg-white p-6 rounded-lg shadow-lg">
