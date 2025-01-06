@@ -107,7 +107,12 @@ async def generate_docs_from_url(repo_url: RepoURL):
             detail=f"Documentation generation failed: {str(e)}"
         )
 
-    
+@app.get("/ping")
+async def ping():
+    """
+    A lightweight route to keep the server alive.
+    """
+    return {"message": "Pong!"}
 
 # Updated template to generate structured JSON-like output
 DOCUMENTATION_TEMPLATE = """
