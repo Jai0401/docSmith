@@ -50,7 +50,7 @@ function App() {
           <button
             onClick={handleGenerateDocs}
             disabled={loading}
-            className="bg-blue-600 text-white py-2 px-6 rounded-lg shadow-md hover:bg-blue-700 focus:outline-none disabled:opacity-50"
+            className="bg-black text-white py-2 px-6 rounded-lg shadow-md hover:bg-gray-800 focus:outline-none disabled:opacity-50"
           >
             Generate
           </button>
