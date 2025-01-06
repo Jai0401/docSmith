@@ -89,6 +89,7 @@ async def generate_docs_from_url(repo_url: RepoURL):
     Generate documentation directly from a remote GitHub repository.
     """
     try:
+        print(repo_url.url)
         # Run repomix with the remote URL to get the packed codebase as a .txt file
         packed_file = await run_repomix(repo_url.url)
 
@@ -222,7 +223,7 @@ async def process_large_codebase(codebase: str, max_chunk_size: int = 30000):
             print("Processing small codebase")
             raw_result = await documentation_chain.ainvoke({"codebase": codebase})
             logging.info(f"LLM raw response: {raw_result}")
-            print(raw_result)
+            # print(raw_result)
             # return parse_documentation_response(raw_result)
             return raw_result
 
