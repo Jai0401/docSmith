@@ -118,7 +118,7 @@ You are a technical documentation expert tasked with analyzing the following cod
 
 ### Documentation Structure:
 
-Ensure to organize the documentation into the following sections. If a section or sub-section is not applicable to the codebase, feel free to remove it. You can also add any additional relevant sections. Use appropriate Markdown styling and formatting to ensure clarity.
+Ensure to organize the documentation into the following sections. If a section or sub-section is not applicable to the codebase, feel free to remove it. You can also add any additional relevant sections. Use appropriate Markdown styling and formatting to ensure clarity, use different font sizes to maintain clear hierarchy like main haeding(name of project) with #project-name and all sub sequent haeding under it with lower size ##,###.
 
 ---
 
