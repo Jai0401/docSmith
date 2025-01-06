@@ -11,7 +11,7 @@ function App() {
   const handleGenerateDocs = async () => {
     setLoading(true);
     try {
-      const response = await axios.post('http://localhost:8000/generate-docs-from-url', { url: repoUrl });
+      const response = await axios.post('https://docsmith.onrender.com/generate-docs-from-url', { url: repoUrl });
       setDocumentation(response.data);
     } catch (error) {
       console.error('Error generating documentation:', error);
