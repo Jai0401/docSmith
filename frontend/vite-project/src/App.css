@@ -1,0 +1,43 @@
+.app {
+  font-family: Arial, sans-serif;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+button {
+  background-color: #007BFF;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  cursor: pointer;
+  margin: 10px 0;
+}
+
+button:disabled {
+  background-color: #aaa;
+}
+
+input {
+  width: 100%;
+  padding: 10px;
+  margin: 10px 0;
+  border: 1px solid #ddd;
+}
+
+.preview {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  background-color: #f9f9f9;
+  padding: 20px;
+  border-radius: 5px;
+  margin-top: 20px;
+}
+
+pre {
+  background-color: #f9f9f9;
+  padding: 20px;
+  border-radius: 5px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
