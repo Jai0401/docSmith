@@ -1,4 +1,8 @@
-flask
+fastapi
 python-dotenv
+pydantic
+langchain-google-genai
+uvicorn
+requests
 langchain
 langchain-google-genai
