@@ -30,7 +30,7 @@ app.add_middleware(
 # Load environment variables and initialize Gemini
 load_dotenv()
 llm = GoogleGenerativeAI(
-    model="gemini-pro",
+    model="gemini-2.0-flash-exp",
     google_api_key=os.getenv("GOOGLE_API_KEY"),
     temperature=0.3,
     max_output_tokens=4096
