@@ -32,7 +32,7 @@ load_dotenv()
 llm = GoogleGenerativeAI(
     model="gemini-pro",
     google_api_key=os.getenv("GOOGLE_API_KEY"),
-    temperature=0.7,
+    temperature=0.3,
     max_output_tokens=4096
 )
 
@@ -124,7 +124,7 @@ You are a technical documentation expert tasked with analyzing the following cod
 
 ### Documentation Structure:
 
-Ensure to organize the documentation into the following sections. If a section or sub-section is not applicable to the codebase, feel free to remove it. You can also add any additional relevant sections. Use appropriate Markdown styling and formatting to ensure clarity, use different font sizes to maintain clear hierarchy like main haeding(name of project) with #project-name and all sub sequent haeding under it with lower size ##,###.
+Organize the documentation into the following sections. If a section is not applicable, omit it. Add any additional sections or subsections as necessary to enhance clarity and usability. Use **Markdown styling** to maintain a clear hierarchy with headings and subheadings:  
 
 ---
 
