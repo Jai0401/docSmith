@@ -30,7 +30,7 @@ app.add_middleware(
 # Load environment variables and initialize Gemini
 load_dotenv()
 llm = GoogleGenerativeAI(
-    model="gemini-2.0-flash-exp",
+    model="gemini-1.5-pro",
     google_api_key=os.getenv("GOOGLE_API_KEY"),
     temperature=0.3,
     max_output_tokens=4096
@@ -116,65 +116,121 @@ async def ping():
     return {"message": "Pong!"}
 
 # Updated template to generate structured JSON-like output
+# DOCUMENTATION_TEMPLATE = """
+# You are a technical documentation expert tasked with analyzing the following codebase and generating comprehensive and well-structured documentation. Please return the documentation in **Markdown format**.
+
+# ### Codebase:
+# {codebase}
+
+# ### Documentation Structure:
+
+# Organize the documentation into the following sections. If a section is not applicable, omit it. Add any additional sections or subsections as necessary to enhance clarity and usability. Use **Markdown styling** to maintain a clear hierarchy with headings and subheadings:  
+
+# ---
+
+# #### 1. **Project Overview:**
+# - **Description**: Provide a detailed description of the project, including its background and context.
+# - **Purpose**: State the primary goals and objectives of the project.
+# - **Features**: List the key features and capabilities of the project.
+# - **Target Audience**: Define who the project is intended for (e.g., developers, businesses, end users).
+
+# #### 2. **Setup Instructions:**
+# - **Prerequisites**: List any software, tools, or libraries that must be installed before setting up the project.
+# - **Installation**: Provide step-by-step instructions for installing the project.
+# - **Configuration**: Detail any configuration settings or files that need to be modified.
+# - **Environment Setup**: Explain the environment setup (e.g., development, production, etc.).
+# - **First-Time Run**: Instructions on running the project for the first time, including any initial setup required.
+
+# #### 3. **Core Modules and Architecture:**
+# - **Components**: List the main components of the project (e.g., services, classes, modules).
+# - **Relationships**: Describe how the components interact with each other.
+# - **Key Functionalities**: Highlight the main functionalities each module/component offers.
+# - **Internal Architecture**: Provide details on the project's internal architecture (e.g., microservices, monolithic structure).
+
+# #### 4. **API Endpoints:**
+# - **Endpoints**: List and describe all available API endpoints.
+# - **Request/Response Formats**: Explain the structure of requests and responses.
+# - **Authentication**: Specify the authentication methods supported by the API.
+# - **Example Requests**: Provide example API requests for better understanding.
+# - **Error Handling**: Describe how errors are handled and what error messages to expect.
+
+# #### 5. **Usage Examples:**
+# - **Common Use Cases**: Outline typical scenarios for using the project.
+# - **Code Samples**: Provide relevant code snippets demonstrating how to use the project.
+# - **Best Practices**: List best practices for using the project efficiently and effectively.
+# - **Tips and Tricks**: Offer any tips, shortcuts, or helpful advice for users.
+
+# #### 6. **Dependencies:**
+# - **Required Libraries**: List all libraries or dependencies required to run the project.
+# - **Version Requirements**: Specify the version of each library or tool.
+# - **System Prerequisites**: Outline the system requirements (e.g., operating system, hardware).
+# - **External Services**: List any external services or APIs the project depends on.
+
+# #### 7. **Future Improvements and Roadmap:**
+# - **Enhancements**: Mention potential improvements or features that could be added in the future.
+# - **Optimization Opportunities**: Suggest areas of the project that could be optimized for better performance or efficiency.
+# - **Planned Features**: List the features that are planned for future releases.
+# - **Known Limitations**: Mention any limitations or known issues that users should be aware of.
+
+# ---
+
+# ### Additional Notes:
+# - Use appropriate Markdown headers (#, ##, ###, etc.) for section hierarchy.
+# - Ensure clarity by using lists, tables, or code blocks (`code`) where helpful.
+# - Keep the language simple and concise.
+# - Provide examples or explanations where needed to ensure comprehensibility for users of varying expertise.
+# """
+
+
 DOCUMENTATION_TEMPLATE = """
-You are a technical documentation expert tasked with analyzing the following codebase and generating comprehensive and well-structured documentation. Please return the documentation in **Markdown format**.
+You are an experienced technical documentation expert. Your task is to analyze the provided codebase and create **comprehensive, well-structured, and user-friendly documentation**. The output must be in **Markdown format**.  
 
-### Codebase:
-{codebase}
+### Codebase:  
+{codebase}  
 
-### Documentation Structure:
+### Documentation Guidelines:  
 
 Organize the documentation into the following sections. If a section is not applicable, omit it. Add any additional sections or subsections as necessary to enhance clarity and usability. Use **Markdown styling** to maintain a clear hierarchy with headings and subheadings:  
 
----
+1. **Project Overview** (#)
+   - Purpose of the project
+   - Key features
+   - Supported platforms or requirements  
 
-#### 1. **Project Overview:**
-- **Description**: Provide a detailed description of the project, including its background and context.
-- **Purpose**: State the primary goals and objectives of the project.
-- **Features**: List the key features and capabilities of the project.
-- **Target Audience**: Define who the project is intended for (e.g., developers, businesses, end users).
+2. **Getting Started** (##)
+   - Installation or setup instructions
+   - Dependencies or prerequisites  
 
-#### 2. **Setup Instructions:**
-- **Prerequisites**: List any software, tools, or libraries that must be installed before setting up the project.
-- **Installation**: Provide step-by-step instructions for installing the project.
-- **Configuration**: Detail any configuration settings or files that need to be modified.
-- **Environment Setup**: Explain the environment setup (e.g., development, production, etc.).
-- **First-Time Run**: Instructions on running the project for the first time, including any initial setup required.
+3. **Usage** (##)
+   - How to use the project
+   - Code snippets or examples  
 
-#### 3. **Core Modules and Architecture:**
-- **Components**: List the main components of the project (e.g., services, classes, modules).
-- **Relationships**: Describe how the components interact with each other.
-- **Key Functionalities**: Highlight the main functionalities each module/component offers.
-- **Internal Architecture**: Provide details on the project's internal architecture (e.g., microservices, monolithic structure).
+4. **Code Structure** (##)
+   - Folder and file organization
+   - Brief descriptions of key components  
 
-#### 4. **API Endpoints:**
-- **Endpoints**: List and describe all available API endpoints.
-- **Request/Response Formats**: Explain the structure of requests and responses.
-- **Authentication**: Specify the authentication methods supported by the API.
-- **Example Requests**: Provide example API requests for better understanding.
-- **Error Handling**: Describe how errors are handled and what error messages to expect.
+5. **API Documentation** (if applicable) (##)
+   - Endpoints (GET, POST, etc.)
+   - Input and output formats  
+   - Example API requests and responses  
 
-#### 5. **Usage Examples:**
-- **Common Use Cases**: Outline typical scenarios for using the project.
-- **Code Samples**: Provide relevant code snippets demonstrating how to use the project.
-- **Best Practices**: List best practices for using the project efficiently and effectively.
-- **Tips and Tricks**: Offer any tips, shortcuts, or helpful advice for users.
+6. **Contributing** (if applicable) (##)
+   - Contribution guidelines
+   - Code style and best practices  
 
-#### 6. **Dependencies:**
-- **Required Libraries**: List all libraries or dependencies required to run the project.
-- **Version Requirements**: Specify the version of each library or tool.
-- **System Prerequisites**: Outline the system requirements (e.g., operating system, hardware).
-- **External Services**: List any external services or APIs the project depends on.
+7. **FAQ** (if applicable) (##)
+   - Common issues and resolutions  
 
-#### 7. **Future Improvements and Roadmap:**
-- **Enhancements**: Mention potential improvements or features that could be added in the future.
-- **Optimization Opportunities**: Suggest areas of the project that could be optimized for better performance or efficiency.
-- **Planned Features**: List the features that are planned for future releases.
-- **Known Limitations**: Mention any limitations or known issues that users should be aware of.
+8. **License** (if applicable) (##)
+   - Licensing details  
+
+### Additional Notes:
+- Use appropriate Markdown headers (#, ##, ###, etc.) for section hierarchy.
+- Ensure clarity by using lists, tables, or code blocks (`code`) where helpful.
+- Keep the language simple and concise.
+- Provide examples or explanations where needed to ensure comprehensibility for users of varying expertise.
 
 ---
-
-Ensure that each section is formatted clearly using **Markdown syntax** and that all the values (such as descriptions, lists, and code snippets) are well-organized and easy to read.
 """
 
 
