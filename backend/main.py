@@ -192,36 +192,36 @@ You are an experienced technical documentation expert. Your task is to analyze t
 
 Organize the documentation into the following sections. If a section is not applicable, omit it. Add any additional sections or subsections as necessary to enhance clarity and usability. Use **Markdown styling** to maintain a clear hierarchy with headings and subheadings:  
 
-1. **Project Overview** (#)
+1. **Project Overview**
    - Purpose of the project
    - Key features
    - Supported platforms or requirements  
 
-2. **Getting Started** (##)
+2. **Getting Started**
    - Installation or setup instructions
    - Dependencies or prerequisites  
 
-3. **Usage** (##)
+3. **Usage**
    - How to use the project
    - Code snippets or examples  
 
-4. **Code Structure** (##)
+4. **Code Structure**
    - Folder and file organization
    - Brief descriptions of key components  
 
-5. **API Documentation** (if applicable) (##)
+5. **API Documentation** (if applicable)
    - Endpoints (GET, POST, etc.)
    - Input and output formats  
    - Example API requests and responses  
 
-6. **Contributing** (if applicable) (##)
+6. **Contributing** (if applicable)
    - Contribution guidelines
    - Code style and best practices  
 
-7. **FAQ** (if applicable) (##)
+7. **FAQ** (if applicable)
    - Common issues and resolutions  
 
-8. **License** (if applicable) (##)
+8. **License** (if applicable)
    - Licensing details  
 
 ### Additional Notes:
