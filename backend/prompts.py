@@ -104,6 +104,7 @@ Organize the documentation into the following sections. If a section is not appl
 ### Additional Notes:
 - Use appropriate Markdown headers (#, ##, ###, etc.) for section hierarchy.
 - Ensure clarity by using lists, tables, or code blocks (`code`) where helpful.
+- Whenever using code block make sure to close it after the code snippet.
 - Keep the language simple and concise.
 - Provide examples or explanations where needed to ensure comprehensibility for users of varying expertise.
 
