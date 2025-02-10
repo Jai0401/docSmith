@@ -6,4 +6,3 @@ uvicorn
 requests
 python-multipart
 langchain
-langchain-google-genai

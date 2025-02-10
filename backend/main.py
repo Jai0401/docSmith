@@ -1,11 +1,14 @@
 from typing import Union, Dict, Any
 from pydantic import BaseModel, HttpUrl
 from fastapi import FastAPI, File, UploadFile, HTTPException,Body
-from langchain_google_genai import GoogleGenerativeAI
+from langchain_core.language_models import BaseChatModel
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.prompts import PromptTemplate
 from langchain_core.runnables import RunnableSequence
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+from .prompts import prompt_02, prompt_04, prompt_00, prompt_01, prompt_05
+import re
 import os
 import json
 import uvicorn
@@ -29,10 +32,10 @@ app.add_middleware(
 
 # Load environment variables and initialize Gemini
 load_dotenv()
-llm = GoogleGenerativeAI(
-    model="gemini-1.5-flash",
+llm = ChatGoogleGenerativeAI(
+    model="gemini-2.0-flash",
     google_api_key=os.getenv("GOOGLE_API_KEY"),
-    temperature=0.3,
+    temperature=0.1,
     max_output_tokens=4096
 )
 
@@ -89,23 +92,99 @@ async def generate_docs_from_url(repo_url: RepoURL):
     Generate documentation directly from a remote GitHub repository.
     """
     try:
-        print(repo_url.url)
+        # Convert to string and normalize URL (remove trailing slash)
+        normalized_url = str(repo_url.url).rstrip("/")
+
+        # Validate GitHub repository URL
+        if not is_valid_github_url(normalized_url):
+            raise HTTPException(status_code=400, detail="Invalid GitHub repository URL.")
+
+        print(normalized_url)
+
         # Run repomix with the remote URL to get the packed codebase as a .txt file
-        packed_file = await run_repomix(repo_url.url)
+        packed_file = await run_repomix(normalized_url)
 
         # Read the packed codebase file
         with open(packed_file, "r", encoding="utf-8") as f:
             codebase_content = f.read()
 
-        # Process the content to generate documentation
-        documentation = await process_large_codebase(codebase_content)
+        # Use prompt_01 for Documentation generation
+        dockerfile_prompt = PromptTemplate(
+            input_variables=["codebase"],
+            template=prompt_01
+        )
+        dockerfile_chain = dockerfile_prompt | llm
+        
+        result = await dockerfile_chain.ainvoke({"codebase": codebase_content})
+        return result.content
 
-        return documentation
 
     except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=f"Documentation generation failed: {str(e)}"
+        )
+
+@app.post("/generate-dockerfile")
+async def generate_dockerfile(repo_url: RepoURL):
+    """
+    Generate Dockerfile from a remote GitHub repository.
+    """
+    try:
+        normalized_url = str(repo_url.url).rstrip("/")
+        if not is_valid_github_url(normalized_url):
+            raise HTTPException(status_code=400, detail="Invalid GitHub repository URL.")
+
+        packed_file = await run_repomix(normalized_url)
+        
+        with open(packed_file, "r", encoding="utf-8") as f:
+            codebase_content = f.read()
+
+        # Use prompt_04 for Dockerfile generation
+        dockerfile_prompt = PromptTemplate(
+            input_variables=["codebase"],
+            template=prompt_04
+        )
+        dockerfile_chain = dockerfile_prompt | llm
+        
+        result = await dockerfile_chain.ainvoke({"codebase": codebase_content})
+        return result.content
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Dockerfile generation failed: {str(e)}"
+        )
+
+@app.post("/generate-docker-compose")
+async def generate_docker_compose(repo_url: RepoURL):
+    """
+    Generate Docker Compose configuration from a remote GitHub repository.
+    """
+    try:
+        normalized_url = str(repo_url.url).rstrip("/")
+        if not is_valid_github_url(normalized_url):
+            raise HTTPException(status_code=400, detail="Invalid GitHub repository URL.")
+
+        packed_file = await run_repomix(normalized_url)
+        
+        with open(packed_file, "r", encoding="utf-8") as f:
+            codebase_content = f.read()
+
+        # Use prompt_05 for Docker Compose generation
+        compose_prompt = PromptTemplate(
+            input_variables=["codebase"],
+            template=prompt_05
+        )
+        compose_chain = compose_prompt | llm
+        
+        result = await compose_chain.ainvoke({"codebase": codebase_content})
+        return result.content
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Docker Compose generation failed: {str(e)}"
         )
 
 @app.get("/ping")
@@ -115,220 +194,12 @@ async def ping():
     """
     return {"message": "Pong!"}
 
-# Updated template to generate structured JSON-like output
-# DOCUMENTATION_TEMPLATE = """
-# You are a technical documentation expert tasked with analyzing the following codebase and generating comprehensive and well-structured documentation. Please return the documentation in **Markdown format**.
-
-# ### Codebase:
-# {codebase}
-
-# ### Documentation Structure:
-
-# Organize the documentation into the following sections. If a section is not applicable, omit it. Add any additional sections or subsections as necessary to enhance clarity and usability. Use **Markdown styling** to maintain a clear hierarchy with headings and subheadings:  
-
-# ---
-
-# #### 1. **Project Overview:**
-# - **Description**: Provide a detailed description of the project, including its background and context.
-# - **Purpose**: State the primary goals and objectives of the project.
-# - **Features**: List the key features and capabilities of the project.
-# - **Target Audience**: Define who the project is intended for (e.g., developers, businesses, end users).
-
-# #### 2. **Setup Instructions:**
-# - **Prerequisites**: List any software, tools, or libraries that must be installed before setting up the project.
-# - **Installation**: Provide step-by-step instructions for installing the project.
-# - **Configuration**: Detail any configuration settings or files that need to be modified.
-# - **Environment Setup**: Explain the environment setup (e.g., development, production, etc.).
-# - **First-Time Run**: Instructions on running the project for the first time, including any initial setup required.
-
-# #### 3. **Core Modules and Architecture:**
-# - **Components**: List the main components of the project (e.g., services, classes, modules).
-# - **Relationships**: Describe how the components interact with each other.
-# - **Key Functionalities**: Highlight the main functionalities each module/component offers.
-# - **Internal Architecture**: Provide details on the project's internal architecture (e.g., microservices, monolithic structure).
-
-# #### 4. **API Endpoints:**
-# - **Endpoints**: List and describe all available API endpoints.
-# - **Request/Response Formats**: Explain the structure of requests and responses.
-# - **Authentication**: Specify the authentication methods supported by the API.
-# - **Example Requests**: Provide example API requests for better understanding.
-# - **Error Handling**: Describe how errors are handled and what error messages to expect.
-
-# #### 5. **Usage Examples:**
-# - **Common Use Cases**: Outline typical scenarios for using the project.
-# - **Code Samples**: Provide relevant code snippets demonstrating how to use the project.
-# - **Best Practices**: List best practices for using the project efficiently and effectively.
-# - **Tips and Tricks**: Offer any tips, shortcuts, or helpful advice for users.
-
-# #### 6. **Dependencies:**
-# - **Required Libraries**: List all libraries or dependencies required to run the project.
-# - **Version Requirements**: Specify the version of each library or tool.
-# - **System Prerequisites**: Outline the system requirements (e.g., operating system, hardware).
-# - **External Services**: List any external services or APIs the project depends on.
-
-# #### 7. **Future Improvements and Roadmap:**
-# - **Enhancements**: Mention potential improvements or features that could be added in the future.
-# - **Optimization Opportunities**: Suggest areas of the project that could be optimized for better performance or efficiency.
-# - **Planned Features**: List the features that are planned for future releases.
-# - **Known Limitations**: Mention any limitations or known issues that users should be aware of.
-
-# ---
-
-# ### Additional Notes:
-# - Use appropriate Markdown headers (#, ##, ###, etc.) for section hierarchy.
-# - Ensure clarity by using lists, tables, or code blocks (`code`) where helpful.
-# - Keep the language simple and concise.
-# - Provide examples or explanations where needed to ensure comprehensibility for users of varying expertise.
-# """
+def is_valid_github_url(url: str) -> bool:
+    """Check if the URL is a valid GitHub repository link."""
+    pattern = r"^https://github\.com/[\w-]+/[\w-]+/?$"
+    return re.match(pattern, url) is not None
 
 
-DOCUMENTATION_TEMPLATE = """
-You are an experienced technical documentation expert. Your task is to analyze the provided codebase and create **comprehensive, well-structured, and user-friendly documentation**. The output must be in **Markdown format**.  
-
-### Codebase:  
-{codebase}  
-
-### Documentation Guidelines:  
-
-Organize the documentation into the following sections. If a section is not applicable, omit it. Add any additional sections or subsections as necessary to enhance clarity and usability. Use **Markdown styling** to maintain a clear hierarchy with headings and subheadings:  
-
-1. **Project Overview**
-   - Purpose of the project
-   - Key features
-   - Supported platforms or requirements  
-
-2. **Getting Started**
-   - Installation or setup instructions
-   - Dependencies or prerequisites  
-
-3. **Usage**
-   - How to use the project
-   - Code snippets or examples  
-
-4. **Code Structure**
-   - Folder and file organization
-   - Brief descriptions of key components  
-
-5. **API Documentation** (if applicable)
-   - Endpoints (GET, POST, etc.)
-   - Input and output formats  
-   - Example API requests and responses  
-
-6. **Contributing** (if applicable)
-   - Contribution guidelines
-   - Code style and best practices  
-
-7. **FAQ** (if applicable)
-   - Common issues and resolutions  
-
-8. **License** (if applicable)
-   - Licensing details  
-
-### Additional Notes:
-- Use appropriate Markdown headers (#, ##, ###, etc.) for section hierarchy.
-- Ensure clarity by using lists, tables, or code blocks (`code`) where helpful.
-- Keep the language simple and concise.
-- Provide examples or explanations where needed to ensure comprehensibility for users of varying expertise.
-
----
-"""
-
-
-# Create documentation pipeline using modern approach
-documentation_prompt = PromptTemplate(
-    input_variables=["codebase"],
-    template=DOCUMENTATION_TEMPLATE
-)
-
-# Create chain using the pipe operator
-documentation_chain = documentation_prompt | llm
-
-def parse_documentation_response(content: str):
-    """
-    Parse the LLM response without enforcing type restrictions.
-    """
-    try:
-        if not content.strip():
-            raise ValueError("LLM response is empty.")
-
-        # Attempt to parse the JSON response
-        return json.loads(content)
-    except json.JSONDecodeError as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to parse JSON from LLM response: {str(e)}"
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Unexpected error while parsing response: {str(e)}"
-        )
-
-def combine_documentation_chunks(chunks):
-    """
-    Combine multiple documentation chunks into a single coherent document.
-    """
-    return chunks[0] if chunks else {}
-
-async def process_large_codebase(codebase: str, max_chunk_size: int = 30000):
-    """
-    Process large codebases without strict type constraints.
-    """
-    try:
-        if len(codebase) <= max_chunk_size:
-            # print("Processing small codebase")
-            raw_result = await documentation_chain.ainvoke({"codebase": codebase})
-            logging.info(f"LLM raw response: {raw_result}")
-            # print(raw_result)
-            # return parse_documentation_response(raw_result)
-            return raw_result
-
-        # Split and process codebase
-        chunks = [codebase[i:i + max_chunk_size] for i in range(0, len(codebase), max_chunk_size)]
-        all_docs = []
-        for chunk in chunks:
-            # print("Processing codebase chunk")
-            raw_result = await documentation_chain.ainvoke({"codebase": chunk})
-            # print(raw_result)
-            logging.info(f"Chunk raw response: {raw_result}")
-            # all_docs.append(parse_documentation_response(raw_result))
-            return raw_result
-            # all_docs.append(raw_result)
-            # print(all_docs[0])
-
-        # return combine_documentation_chunks(all_docs)
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Documentation generation failed: {str(e)}"
-        )
-
-@app.post("/generate-docs")
-async def generate_documentation(file: UploadFile = File(...)):
-    """
-    Generate structured documentation from a codebase file.
-    """
-    try:
-        if not file.filename.endswith('.txt'):
-            raise HTTPException(
-                status_code=400,
-                detail="Please provide a .txt file"
-            )
-
-        content = await file.read()
-        codebase_content = content.decode('utf-8')
-
-        # Generate structured documentation
-        print(codebase_content[:100])
-        documentation = await process_large_codebase(codebase_content)
-
-        return documentation
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Documentation generation failed: {str(e)}"
-        )
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)

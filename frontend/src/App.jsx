@@ -7,27 +7,54 @@ function App() {
   const [documentation, setDocumentation] = useState('');
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState('preview'); // 'raw' or 'preview'
+  const [selectedOption, setSelectedOption] = useState('documentation');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const handleGenerateDocs = async () => {
     setLoading(true);
     try {
-      const response = await axios.post('https://docsmith.onrender.com/generate-docs-from-url', { url: repoUrl });
+      let endpoint = '';
+      switch (selectedOption) {
+        case 'documentation':
+          endpoint = 'generate-docs-from-url';
+          break;
+        case 'dockerfile':
+          endpoint = 'generate-dockerfile';
+          break;
+        case 'docker-compose':
+          endpoint = 'generate-docker-compose';
+          break;
+        default:
+          endpoint = 'generate-docs-from-url';
+      }
+
+      const response = await axios.post(`https://docsmith.onrender.com/${endpoint}`, { 
+        url: repoUrl,
+        type: selectedOption 
+      });
+      
       setDocumentation(response.data);
     } catch (error) {
-      console.error('Error generating documentation:', error);
-      alert('Failed to generate documentation');
+      console.error(`Error generating ${selectedOption}:`, error);
+      alert(`Failed to generate ${selectedOption}`);
     }
     setLoading(false);
   };
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(documentation).then(() => {
-      alert('Documentation copied!');
+    const formattedContent = formatDocumentation(documentation);
+    navigator.clipboard.writeText(formattedContent).then(() => {
+      alert('Content copied!');
     });
   };
 
   const formatDocumentation = (doc) => {
-    return doc.replace(/\\n/g, '\n').replace(/\n\n/g, '\n');
+    if (!doc) return '';
+    return doc
+      .replace(/```markdown\n/g, '')  // Remove opening markdown tags
+      .replace(/```\n/g, '')          // Remove closing tags
+      .replace(/\\n/g, '\n')          // Handle newlines
+      .replace(/\n\n/g, '\n');        // Remove double newlines
   };
 
   return (
@@ -42,11 +69,11 @@ function App() {
             type="text"
             value={repoUrl}
             onChange={(e) => setRepoUrl(e.target.value)}
-            placeholder="Enter GitHub repository URL"
+            placeholder={`Enter GitHub repository URL for ${selectedOption}`}
             className="w-full p-4 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
         </div>
-        <div className="flex justify-between mb-4">
+        <div className="flex items-center gap-4 mb-4">
           <button
             onClick={handleGenerateDocs}
             disabled={loading}
@@ -54,6 +81,37 @@ function App() {
           >
             Generate
           </button>
+          <div className="relative">
+            <button
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="bg-white border border-gray-300 px-4 py-2 rounded-lg inline-flex items-center"
+            >
+              <span className="mr-2">{selectedOption.charAt(0).toUpperCase() + selectedOption.slice(1)}</span>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {isDropdownOpen && (
+              <div className="absolute mt-1 w-48 rounded-lg bg-white shadow-lg z-10 border border-gray-200">
+                <div className="py-1">
+                  {['documentation', 'dockerfile', 'docker-compose'].map((option) => (
+                    <button
+                      key={option}
+                      onClick={() => {
+                        setSelectedOption(option);
+                        setIsDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-4 py-2 hover:bg-gray-100 ${
+                        selectedOption === option ? 'bg-blue-50 text-blue-600' : 'text-gray-800'
+                      }`}
+                    >
+                      {option.charAt(0).toUpperCase() + option.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {loading && (
