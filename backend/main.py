@@ -7,7 +7,7 @@ from langchain.prompts import PromptTemplate
 from langchain_core.runnables import RunnableSequence
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from .prompts import prompt_02, prompt_04, prompt_00, prompt_01, prompt_05
+from prompts import prompt_02, prompt_04, prompt_00, prompt_01, prompt_05
 import re
 import os
 import json
