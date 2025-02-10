@@ -46,7 +46,7 @@ Before you begin, ensure you have the following installed:
         
 5.  **Install Repomix:**
     ```bash
-    ./install_repomix.sh
+    npm install -g repomix
     ```
     This script checks if Repomix is installed and installs it globally using npm if it's not already present.
 6.  **Install the frontend dependencies:**
