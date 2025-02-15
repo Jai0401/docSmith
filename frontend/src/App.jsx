@@ -10,8 +10,52 @@ function App() {
   const [selectedOption, setSelectedOption] = useState('documentation');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
+  const normalizeGitHubUrl = (url) => {
+    try {
+      // Remove trailing slash
+      url = url.trim().replace(/\/$/, '');
+      
+      // If URL doesn't start with http/https, add https://
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'https://' + url;
+      }
+      
+      // Remove www. if present
+      url = url.replace('www.', '');
+      
+      // Parse URL to validate and normalize
+      const urlObj = new URL(url);
+      
+      // Ensure it's a GitHub URL
+      if (!urlObj.hostname.endsWith('github.com')) {
+        throw new Error('Not a GitHub URL');
+      }
+      
+      // Get the path parts
+      const pathParts = urlObj.pathname.split('/').filter(Boolean);
+      
+      // Need at least username/repo
+      if (pathParts.length < 2) {
+        throw new Error('Invalid repository path');
+      }
+      
+      // Construct final URL with just username/repo
+      return `https://github.com/${pathParts[0]}/${pathParts[1]}`;
+    } catch (error) {
+      console.error(`Error normalizing GitHub URL:`, error);
+      return null;
+    }
+  };
+
   const handleGenerateDocs = async () => {
     if (!repoUrl) return;
+    
+    const normalizedUrl = normalizeGitHubUrl(repoUrl);
+    if (!normalizedUrl) {
+      alert('Please enter a valid GitHub repository URL');
+      return;
+    }
+
     setLoading(true);
     try {
       let endpoint = '';
@@ -30,7 +74,7 @@ function App() {
       }
 
       const response = await axios.post(`https://docsmith.onrender.com/${endpoint}`, { 
-        url: repoUrl,
+        url: normalizedUrl,
         type: selectedOption 
       });
       
