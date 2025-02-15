@@ -1,6 +1,7 @@
-# docSmith Documentation
-## Project Overview
+# docSmith
 docSmith is an API designed to generate documentation, Dockerfiles, and Docker Compose configurations from a GitHub repository URL. It leverages the Gemini language model and Langchain to analyze the codebase and produce structured outputs.
+<img width="1710" alt="Screenshot 2025-02-15 at 11 44 21 PM" src="https://github.com/user-attachments/assets/dafa0437-d067-41ef-97f4-c183721dae04" />
+
 **Key Features:**
 *   **Documentation Generation:** Automatically generates comprehensive documentation for a given GitHub repository.
 *   **Dockerfile Generation:** Creates a Dockerfile tailored to the project's needs.
