@@ -239,10 +239,41 @@ function App() {
 
             {/* Loading State */}
             {loading && (
-              <div className="flex justify-center items-center py-12 transition-opacity duration-300">
-                <div className="relative">
-                  <div className="w-12 h-12 rounded-full border-2 border-blue-500/20 animate-pulse"></div>
-                  <div className="absolute top-0 left-0 w-12 h-12 rounded-full border-t-2 border-blue-500 animate-spin"></div>
+              <div className="flex flex-col items-center justify-center py-12 transition-opacity duration-300">
+                <div className="relative flex items-center justify-center mb-4">
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-teal-500/20 rounded-full blur-xl"></div>
+                  <div className="relative flex items-center space-x-3">
+                    <div className="w-3 h-3 rounded-full bg-blue-400/90 animate-loading-dot-1"></div>
+                    <div className="w-3 h-3 rounded-full bg-blue-400/90 animate-loading-dot-2"></div>
+                    <div className="w-3 h-3 rounded-full bg-blue-400/90 animate-loading-dot-3"></div>
+                  </div>
+                </div>
+                <div className="text-sm text-gray-400 font-medium">
+                  <span className="inline-flex items-center">
+                    <svg 
+                      className="w-4 h-4 mr-2 animate-spin" 
+                      fill="none" 
+                      viewBox="0 0 24 24"
+                    >
+                      <circle 
+                        className="opacity-25" 
+                        cx="12" 
+                        cy="12" 
+                        r="10" 
+                        stroke="currentColor" 
+                        strokeWidth="4"
+                      ></circle>
+                      <path 
+                        className="opacity-75" 
+                        fill="currentColor" 
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Generating {selectedOption}...
+                  </span>
+                </div>
+                <div className="mt-2 text-xs text-gray-500">
+                  This might take a few seconds
                 </div>
               </div>
             )}
