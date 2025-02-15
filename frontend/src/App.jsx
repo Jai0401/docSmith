@@ -51,11 +51,23 @@ function App() {
 
   const formatDocumentation = (doc) => {
     if (!doc) return '';
-    return doc
-      .replace(/```markdown\n/g, '')
-      .replace(/```\n/g, '')
-      .replace(/\\n/g, '\n')
-      .replace(/\n\n/g, '\n');
+    
+    // Different formatting based on the selected option
+    if (selectedOption === 'documentation') {
+      return doc
+        .replace(/```markdown\n/g, '')
+        .replace(/```\n/g, '')
+        .replace(/\\n/g, '\n')
+        .replace(/\n\n/g, '\n');
+    } else {
+      // For Dockerfile and Docker Compose
+      return doc
+        .replace(/```dockerfile\n/g, '')
+        .replace(/```yaml\n/g, '')
+        .replace(/```\n/g, '')
+        .replace(/\\n/g, '\n')
+        .replace(/\n\n/g, '\n');
+    }
   };
 
   const handleKeyPress = (e) => {
@@ -73,8 +85,19 @@ function App() {
             <h1 className="text-xl font-semibold">docSmith</h1>
           </div>
           <nav className="flex items-center space-x-6">
-            {/* <a href="#" className="text-gray-400 hover:text-white transition-colors">Docs</a> */}
-            <a href="https://github.com/Jai0401/docSmith" className="text-gray-400 hover:text-white transition-colors">GitHub</a>
+            <a 
+              href="https://github.com/Jai0401/docSmith" 
+              className="flex items-center space-x-2 px-3 py-1.5 bg-[#21262D] rounded-md text-sm text-gray-300 hover:bg-gray-700/50 transition-colors group"
+            >
+              <svg 
+                className="w-5 h-5 text-gray-400 group-hover:text-yellow-400 transition-colors" 
+                fill="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path d="M12 .25a.75.75 0 01.673.418l3.058 6.197 6.839.994a.75.75 0 01.415 1.279l-4.948 4.823 1.168 6.811a.75.75 0 01-1.088.791L12 18.347l-6.117 3.216a.75.75 0 01-1.088-.79l1.168-6.812-4.948-4.823a.75.75 0 01.416-1.28l6.838-.993L11.328.668A.75.75 0 0112 .25z"/>
+              </svg>
+              <span>Star Us GitHub</span>
+            </a>
           </nav>
         </div>
       </header>
@@ -210,10 +233,35 @@ function App() {
                     {formatDocumentation(documentation)}
                   </pre>
                 ) : (
-                  <div className="prose prose-invert max-w-none">
-                    <ReactMarkdown>
-                      {formatDocumentation(documentation)}
-                    </ReactMarkdown>
+                  <div className={`${
+                    selectedOption === 'documentation' 
+                      ? 'prose prose-invert max-w-none' 
+                      : 'font-mono text-sm'
+                  }`}>
+                    {selectedOption === 'documentation' ? (
+                      <ReactMarkdown>
+                        {formatDocumentation(documentation)}
+                      </ReactMarkdown>
+                    ) : (
+                      <div className="relative group">
+                        <div className="absolute -inset-2 bg-gradient-to-r from-blue-500/5 to-teal-500/5 rounded-lg blur-sm"></div>
+                        <div className="relative">
+                          <div className="flex items-center justify-between mb-2 text-xs text-gray-400">
+                            <span>{selectedOption === 'dockerfile' ? 'Dockerfile' : 'docker-compose.yml'}</span>
+                            <div className="flex items-center space-x-2">
+                              <span className="px-2 py-1 rounded-md bg-blue-500/10 text-blue-400">
+                                {selectedOption === 'dockerfile' ? 'Docker' : 'YAML'}
+                              </span>
+                            </div>
+                          </div>
+                          <pre className="bg-black/20 p-4 rounded-lg overflow-x-auto">
+                            <code className="text-gray-300">
+                              {formatDocumentation(documentation)}
+                            </code>
+                          </pre>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
