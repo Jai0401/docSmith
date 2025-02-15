@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 
@@ -9,6 +9,7 @@ function App() {
   const [view, setView] = useState('preview');
   const [selectedOption, setSelectedOption] = useState('documentation');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [editedContent, setEditedContent] = useState('');
 
   const normalizeGitHubUrl = (url) => {
     try {
@@ -87,8 +88,8 @@ function App() {
   };
 
   const handleCopy = () => {
-    const formattedContent = formatDocumentation(documentation);
-    navigator.clipboard.writeText(formattedContent).then(() => {
+    const contentToCopy = view === 'edit' ? editedContent : formatDocumentation(documentation);
+    navigator.clipboard.writeText(contentToCopy).then(() => {
       alert('Content copied!');
     });
   };
@@ -99,16 +100,20 @@ function App() {
     // Different formatting based on the selected option
     if (selectedOption === 'documentation') {
       return doc
-        .replace(/```markdown\n/g, '')
-        .replace(/```\n/g, '')
+        .replace(/```markdown\n/g, '')  // Remove opening markdown marker
+        .replace(/```yaml\n/g, '')      // Remove opening yaml marker
+        .replace(/```dockerfile\n/g, '') // Remove opening dockerfile marker
+        .replace(/```\n/g, '')          // Remove opening marker
+        .replace(/```$/gm, '')          // Remove closing marker at end of lines
         .replace(/\\n/g, '\n')
         .replace(/\n\n/g, '\n');
     } else {
       // For Dockerfile and Docker Compose
       return doc
-        .replace(/```dockerfile\n/g, '')
-        .replace(/```yaml\n/g, '')
-        .replace(/```\n/g, '')
+        .replace(/```dockerfile\n/g, '') // Remove opening dockerfile marker
+        .replace(/```yaml\n/g, '')       // Remove opening yaml marker
+        .replace(/```\n/g, '')           // Remove opening marker
+        .replace(/```$/gm, '')           // Remove closing marker at end of lines
         .replace(/\\n/g, '\n')
         .replace(/\n\n/g, '\n');
     }
@@ -119,6 +124,12 @@ function App() {
       handleGenerateDocs();
     }
   };
+
+  useEffect(() => {
+    if (documentation) {
+      setEditedContent(formatDocumentation(documentation));
+    }
+  }, [documentation]);
 
   return (
     <div className="min-h-screen bg-[#0D1117] text-white">
@@ -243,13 +254,13 @@ function App() {
                     )}
                   </button>
                   <button
-                    onClick={() => setView('raw')}
+                    onClick={() => setView('edit')}
                     className={`text-sm font-medium transition-colors relative ${
-                      view === 'raw' ? 'text-blue-400' : 'text-gray-400 hover:text-gray-300'
+                      view === 'edit' ? 'text-blue-400' : 'text-gray-400 hover:text-gray-300'
                     }`}
                   >
-                    Raw
-                    {view === 'raw' && (
+                    Edit
+                    {view === 'edit' && (
                       <div className="absolute -bottom-4 left-0 right-0 h-0.5 bg-blue-400"></div>
                     )}
                   </button>
@@ -272,10 +283,26 @@ function App() {
 
               {/* Results Content */}
               <div className="p-6">
-                {view === 'raw' ? (
-                  <pre className="text-sm text-gray-300 font-mono whitespace-pre-wrap bg-black/20 p-4 rounded-lg">
-                    {formatDocumentation(documentation)}
-                  </pre>
+                {view === 'edit' ? (
+                  <div className="relative group">
+                    <div className="absolute -inset-2 bg-gradient-to-r from-blue-500/5 to-teal-500/5 rounded-lg blur-sm"></div>
+                    <div className="relative">
+                      <div className="flex items-center justify-between mb-2 text-xs text-gray-400">
+                        <span>{selectedOption === 'dockerfile' ? 'Dockerfile' : selectedOption === 'docker-compose' ? 'docker-compose.yml' : 'README.md'}</span>
+                        <div className="flex items-center space-x-2">
+                          <span className="px-2 py-1 rounded-md bg-blue-500/10 text-blue-400">
+                            {selectedOption === 'dockerfile' ? 'Docker' : selectedOption === 'docker-compose' ? 'YAML' : 'Markdown'}
+                          </span>
+                        </div>
+                      </div>
+                      <textarea
+                        value={editedContent}
+                        onChange={(e) => setEditedContent(e.target.value)}
+                        className="w-full h-[500px] bg-black/20 p-4 rounded-lg text-gray-300 font-mono text-sm resize-none focus:outline-none focus:ring-1 focus:ring-blue-500/50"
+                        spellCheck="false"
+                      />
+                    </div>
+                  </div>
                 ) : (
                   <div className={`${
                     selectedOption === 'documentation' 
@@ -284,7 +311,7 @@ function App() {
                   }`}>
                     {selectedOption === 'documentation' ? (
                       <ReactMarkdown>
-                        {formatDocumentation(documentation)}
+                        {editedContent}
                       </ReactMarkdown>
                     ) : (
                       <div className="relative group">
@@ -300,7 +327,7 @@ function App() {
                           </div>
                           <pre className="bg-black/20 p-4 rounded-lg overflow-x-auto">
                             <code className="text-gray-300">
-                              {formatDocumentation(documentation)}
+                              {editedContent}
                             </code>
                           </pre>
                         </div>
