@@ -187,17 +187,28 @@ function App() {
             <nav className="flex items-center">
               <a 
                 href="https://github.com/Jai0401/docSmith" 
-                className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-1.5 bg-[#1A1D21] border border-gray-800 rounded-md text-xs sm:text-sm text-gray-400 hover:border-gray-700 transition-colors group"
+                className="group relative overflow-hidden px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all duration-300"
               >
-                <svg 
-                  className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 group-hover:text-yellow-400 transition-colors" 
-                  fill="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M12 .25a.75.75 0 01.673.418l3.058 6.197 6.839.994a.75.75 0 01.415 1.279l-4.948 4.823 1.168 6.811a.75.75 0 01-1.088.791L12 18.347l-6.117 3.216a.75.75 0 01-1.088-.79l1.168-6.812-4.948-4.823a.75.75 0 01.416-1.28l6.838-.993L11.328.668A.75.75 0 0112 .25z"/>
-                </svg>
-                <span className="hidden sm:inline">Star Us GitHub</span>
-                <span className="sm:hidden">Star</span>
+                {/* Background layers */}
+                <div className="absolute inset-0 bg-gradient-to-r from-[#1A1D21] to-[#21262D] border border-gray-800"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-teal-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                
+                {/* Content */}
+                <div className="relative flex items-center space-x-2">
+                  <svg 
+                    className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-gray-400 group-hover:text-yellow-400 transition-colors duration-300" 
+                    viewBox="0 0 16 16"
+                    fill="currentColor"
+                  >
+                    <path d="M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z" />
+                  </svg>
+                  <span className="hidden sm:inline text-gray-300 group-hover:text-white transition-colors duration-300">
+                    Star on GitHub
+                  </span>
+                  <span className="sm:hidden text-gray-300 group-hover:text-white transition-colors duration-300">
+                    Star
+                  </span>
+                </div>
               </a>
             </nav>
           </div>
