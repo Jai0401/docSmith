@@ -1,6 +1,8 @@
 from typing import Union, Dict, Any
 from pydantic import BaseModel, HttpUrl
-from fastapi import FastAPI, File, UploadFile, HTTPException,Body
+from fastapi import FastAPI, File, UploadFile, HTTPException, Body, Request
+from fastapi.responses import JSONResponse
+from tenacity import retry, wait_random_exponential
 from langchain_core.language_models import BaseChatModel
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.prompts import PromptTemplate
@@ -15,20 +17,44 @@ import uvicorn
 import logging
 import subprocess
 
+@retry(wait=wait_random_exponential(multiplier=1, max=60))
+async def retry_llm_call(chain, input_data):
+    """
+    Wrapper function to retry LLM calls with exponential backoff
+    """
+    print("Trying LLM call...")
+    return await chain.ainvoke(input_data)
+
 # Initialize FastAPI application with metadata
 app = FastAPI(
     title="Documentation Generator API",
     description="API for generating structured documentation from codebase using Gemini and Langchain",
     version="1.0.0"
 )
-# Allow CORS for all origins (you can change this if needed)
+# Allow CORS for all origins (can change this if needed)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all HTTP methods
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def handle_429_errors(request: Request, call_next):
+    try:
+        response = await call_next(request)
+        return response
+    except Exception as e:
+        if "429" in str(e):
+            return JSONResponse(
+                status_code=429,
+                content={
+                    "detail": "Resource exhausted. Please try again later.",
+                    "retry_after": "60"
+                }
+            )
+        raise e
 
 # Load environment variables and initialize Gemini
 load_dotenv()
@@ -92,10 +118,7 @@ async def generate_docs_from_url(repo_url: RepoURL):
     Generate documentation directly from a remote GitHub repository.
     """
     try:
-        # Convert to string and normalize URL (remove trailing slash)
         normalized_url = str(repo_url.url).rstrip("/")
-
-        # Validate GitHub repository URL
         if not is_valid_github_url(normalized_url):
             raise HTTPException(status_code=400, detail="Invalid GitHub repository URL.")
 
@@ -103,23 +126,26 @@ async def generate_docs_from_url(repo_url: RepoURL):
 
         # Run repomix with the remote URL to get the packed codebase as a .txt file
         packed_file = await run_repomix(normalized_url)
-
-        # Read the packed codebase file
+        
         with open(packed_file, "r", encoding="utf-8") as f:
             codebase_content = f.read()
 
-        # Use prompt_01 for Documentation generation
         dockerfile_prompt = PromptTemplate(
             input_variables=["codebase"],
             template=prompt_01
         )
         dockerfile_chain = dockerfile_prompt | llm
         
-        result = await dockerfile_chain.ainvoke({"codebase": codebase_content})
+        # Use retry wrapper here
+        result = await retry_llm_call(dockerfile_chain, {"codebase": codebase_content})
         return result.content
 
-
     except Exception as e:
+        if "429" in str(e):
+            raise HTTPException(
+                status_code=429,
+                detail="Resource exhausted. Please try again later."
+            )
         raise HTTPException(
             status_code=500,
             detail=f"Documentation generation failed: {str(e)}"
