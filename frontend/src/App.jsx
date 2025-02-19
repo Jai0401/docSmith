@@ -226,7 +226,7 @@ function App() {
                 hasGenerated ? 'transform-none' : 'transform scale-110'
               }`}>
                 <span className="bg-gradient-to-b from-white to-gray-400/80 bg-clip-text text-transparent">
-                  Generate documentation from a
+                  Generate documentation from a 
                 </span>
                 <br className="hidden sm:block" />
                 <span className="bg-gradient-to-b from-white to-gray-400/80 bg-clip-text text-transparent">
