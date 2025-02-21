@@ -235,9 +235,7 @@ function App() {
               </h2>
 
               {/* Search Input */}
-              <div className={`relative mb-8 group transition-all duration-700 ease-in-out backdrop-blur-sm px-4 sm:px-0 ${
-                hasGenerated ? 'transform-none' : 'transform scale-105'
-              }`}>
+              <div className="relative mb-8 group transition-all duration-700 ease-in-out backdrop-blur-sm z-40">
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-teal-500/20 rounded-lg blur opacity-75 group-hover:opacity-100 transition duration-200"></div>
                 <div className="relative">
                   <input
@@ -280,7 +278,7 @@ function App() {
 
                 {/* Dropdown Menu */}
                 {isDropdownOpen && (
-                  <div className="absolute right-24 top-12 w-48 bg-[#161B22]/90 backdrop-blur-md border border-gray-700/50 rounded-lg shadow-xl z-10">
+                  <div className="absolute right-24 top-12 w-48 bg-[#161B22]/90 backdrop-blur-md border border-gray-700/50 rounded-lg shadow-xl z-50">
                     {['documentation', 'dockerfile', 'docker-compose'].map((option) => (
                       <button
                         key={option}
@@ -346,7 +344,7 @@ function App() {
 
               {/* Results */}
               {documentation && !loading && (
-                <div className="bg-[#161B22]/80 backdrop-blur-sm rounded-lg border border-gray-700/50 overflow-hidden shadow-xl transition-all duration-500 ease-in-out animate-fadeIn mx-4 sm:mx-0">
+                <div className="bg-[#161B22]/80 backdrop-blur-sm rounded-lg border border-gray-700/50 overflow-hidden shadow-xl transition-all duration-500 ease-in-out animate-fadeIn mx-4 sm:mx-0 z-30">
                   {/* Results Header */}
                   <div className="border-b border-gray-700/50 p-3 sm:p-4 flex justify-between items-center bg-gradient-to-r from-gray-800/50 to-transparent">
                     <div className="flex space-x-6">
