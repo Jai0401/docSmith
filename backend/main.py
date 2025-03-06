@@ -251,7 +251,8 @@ async def ping():
 
 def is_valid_github_url(url: str) -> bool:
     """Check if the URL is a valid GitHub repository link."""
-    pattern = r"^https://github\.com/[\w-]+/[\w-]+/?$"
+    # Updated pattern to accept URLs with optional .git suffix
+    pattern = r"^https://github\.com/[\w-]+/[\w-]+(?:\.git)?/?$"
     return re.match(pattern, url) is not None
 
 
