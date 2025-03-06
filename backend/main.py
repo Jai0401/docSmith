@@ -2,7 +2,7 @@ from typing import Union, Dict, Any
 from pydantic import BaseModel, HttpUrl
 from fastapi import FastAPI, File, UploadFile, HTTPException, Body, Request
 from fastapi.responses import JSONResponse
-from tenacity import retry, wait_random_exponential
+from tenacity import retry, wait_random_exponential, stop_after_attempt
 from langchain_core.language_models import BaseChatModel
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.prompts import PromptTemplate
@@ -17,13 +17,22 @@ import uvicorn
 import logging
 import subprocess
 
-@retry(wait=wait_random_exponential(multiplier=1, max=60))
+@retry(wait=wait_random_exponential(multiplier=1, max=60), stop=stop_after_attempt(3))
 async def retry_llm_call(chain, input_data):
     """
     Wrapper function to retry LLM calls with exponential backoff
     """
-    print("Trying LLM call...")
-    return await chain.ainvoke(input_data)
+    try:
+        print(f"Trying LLM call... Input size: {len(input_data['codebase'])} characters")
+        return await chain.ainvoke(input_data)
+    except Exception as e:
+        print(f"LLM call failed: {str(e)}")
+        # Check for specific error types
+        if "event loop" in str(e).lower():
+            print("Event loop error detected. Ensure LLM is initialized properly within async context.")
+        elif "429" in str(e):
+            print("Rate limit error detected. Consider implementing a delay.")
+        raise e
 
 # Initialize FastAPI application with metadata
 app = FastAPI(
@@ -56,14 +65,17 @@ async def handle_429_errors(request: Request, call_next):
             )
         raise e
 
-# Load environment variables and initialize Gemini
+# Load environment variables
 load_dotenv()
-llm = ChatGoogleGenerativeAI(
-    model="gemini-2.0-flash",
-    google_api_key=os.getenv("GOOGLE_API_KEY"),
-    temperature=0.1,
-    max_output_tokens=4096
-)
+
+# Create a function to get the LLM instance within async context
+def create_llm():
+    return ChatGoogleGenerativeAI(
+        model="gemini-2.0-flash",
+        google_api_key=os.getenv("GOOGLE_API_KEY"),
+        temperature=0.1,
+        max_output_tokens=4096
+    )
 
 
 # New API input model for GitHub URL
@@ -129,7 +141,22 @@ async def generate_docs_from_url(repo_url: RepoURL):
         
         with open(packed_file, "r", encoding="utf-8") as f:
             codebase_content = f.read()
+        
+        # Check the size and truncate if necessary
+        content_size = len(codebase_content)
+        print(f"Original codebase size: {content_size} characters")
+        
+        # Limit to approximately 900k characters (adjust as needed)
+        MAX_SIZE = 2000000
+        if content_size > MAX_SIZE:
+            print(f"Truncating codebase from {content_size} to {MAX_SIZE} characters")
+            codebase_content = codebase_content[:MAX_SIZE]
+            # Add a note about truncation
+            codebase_content += "\n\n[Note: This codebase was truncated due to size limitations.]"
 
+        # Create LLM instance within async context
+        llm = create_llm()
+        
         dockerfile_prompt = PromptTemplate(
             input_variables=["codebase"],
             template=prompt_01
@@ -158,6 +185,7 @@ async def generate_dockerfile(repo_url: RepoURL):
     """
     try:
         normalized_url = str(repo_url.url).rstrip("/")
+        print(normalized_url)
         if not is_valid_github_url(normalized_url):
             raise HTTPException(status_code=400, detail="Invalid GitHub repository URL.")
 
@@ -171,7 +199,7 @@ async def generate_dockerfile(repo_url: RepoURL):
             input_variables=["codebase"],
             template=prompt_04
         )
-        dockerfile_chain = dockerfile_prompt | llm
+        dockerfile_chain = dockerfile_prompt | create_llm()
         
         result = await dockerfile_chain.ainvoke({"codebase": codebase_content})
         return result.content
@@ -189,6 +217,7 @@ async def generate_docker_compose(repo_url: RepoURL):
     """
     try:
         normalized_url = str(repo_url.url).rstrip("/")
+        print(normalized_url)
         if not is_valid_github_url(normalized_url):
             raise HTTPException(status_code=400, detail="Invalid GitHub repository URL.")
 
@@ -202,7 +231,7 @@ async def generate_docker_compose(repo_url: RepoURL):
             input_variables=["codebase"],
             template=prompt_05
         )
-        compose_chain = compose_prompt | llm
+        compose_chain = compose_prompt | create_llm()
         
         result = await compose_chain.ainvoke({"codebase": codebase_content})
         return result.content
