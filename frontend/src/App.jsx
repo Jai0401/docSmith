@@ -107,6 +107,7 @@ function App() {
         .replace(/```dockerfile\n/g, '') // Remove opening dockerfile marker
         .replace(/```\n/g, '')          // Remove opening marker
         .replace(/```$/gm, '')          // Remove closing marker at end of lines
+        .replace(/<end_code>/g, '```')  // Replace <end_code> with triple backticks
         .replace(/\\n/g, '\n')
         .replace(/\n\n/g, '\n');
     } else {
@@ -116,6 +117,7 @@ function App() {
         .replace(/```yaml\n/g, '')       // Remove opening yaml marker
         .replace(/```\n/g, '')           // Remove opening marker
         .replace(/```$/gm, '')           // Remove closing marker at end of lines
+        .replace(/<end_code>/g, '```')   // Replace <end_code> with triple backticks
         .replace(/\\n/g, '\n')
         .replace(/\n\n/g, '\n');
     }
