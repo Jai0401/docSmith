@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Analytics } from '@vercel/analytics/next';
 import ReactMarkdown from 'react-markdown';
 
 function App() {
@@ -451,7 +450,6 @@ function App() {
           </div>
         </main>
       </div>
-      <Analytics />
     </div>
   );
 }
