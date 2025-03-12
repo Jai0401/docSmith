@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Analytics } from '@vercel/analytics/next';
 import ReactMarkdown from 'react-markdown';
 
 function App() {
@@ -75,7 +76,7 @@ function App() {
           endpoint = 'generate-docs-from-url';
       }
 
-      const response = await axios.post(`https://docsmith.onrender.com/${endpoint}`, { 
+      const response = await axios.post(`http://127.0.0.1:8000/${endpoint}`, { 
         url: normalizedUrl,
         type: selectedOption 
       });
@@ -450,6 +451,7 @@ function App() {
           </div>
         </main>
       </div>
+      <Analytics />
     </div>
   );
 }
