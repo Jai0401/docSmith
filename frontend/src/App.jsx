@@ -75,7 +75,7 @@ function App() {
           endpoint = 'generate-docs-from-url';
       }
 
-      const response = await axios.post(`http://127.0.0.1:8000/${endpoint}`, { 
+      const response = await axios.post(`https://docsmith.onrender.com/${endpoint}`, { 
         url: normalizedUrl,
         type: selectedOption 
       });
