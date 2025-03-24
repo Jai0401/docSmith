@@ -75,7 +75,7 @@ function App() {
           endpoint = 'generate-docs-from-url';
       }
 
-      const response = await axios.post(`https://docsmith.onrender.com/${endpoint}`, { 
+      const response = await axios.post(`https://docsmith-nlf6.onrender.com/${endpoint}`, { 
         url: normalizedUrl,
         type: selectedOption 
       });
