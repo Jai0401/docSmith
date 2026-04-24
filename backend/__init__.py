@@ -1,5 +1,19 @@
-"""
-docSmith - Agentic Documentation Generator Backend
-"""
+# This file indicates that the directory is a Python package.
 
-__version__ = "1.0.0"
+# Import all necessary prompts
+from .prompts import (
+    prompt_00,
+    prompt_01,
+    prompt_02,
+    prompt_04,
+    prompt_05
+)
+
+# You can expose specific functions/classes here if needed
+__all__ = [
+    'prompt_00',
+    'prompt_01',
+    'prompt_02',
+    'prompt_04',
+    'prompt_05'
+]
