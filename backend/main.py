@@ -1,46 +1,37 @@
-from typing import Union, Dict, Any
-from pydantic import BaseModel, HttpUrl
-from fastapi import FastAPI, File, UploadFile, HTTPException, Body, Request
-from fastapi.responses import JSONResponse
-from tenacity import retry, wait_random_exponential, stop_after_attempt
-from langchain_core.language_models import BaseChatModel
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.prompts import PromptTemplate
-from langchain_core.runnables import RunnableSequence
-from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
-from prompts import prompt_04, prompt_01, prompt_05
-import re
+"""docSmith FastAPI application."""
 import os
+import asyncio
 import json
-import uvicorn
-import logging
-import subprocess
+from contextlib import asynccontextmanager
 
-@retry(wait=wait_random_exponential(multiplier=1, max=60), stop=stop_after_attempt(3))
-async def retry_llm_call(chain, input_data):
-    """
-    Wrapper function to retry LLM calls with exponential backoff
-    """
-    try:
-        print(f"Trying LLM call... Input size: {len(input_data['codebase'])} characters")
-        return await chain.ainvoke(input_data)
-    except Exception as e:
-        print(f"LLM call failed: {str(e)}")
-        # Check for specific error types
-        if "event loop" in str(e).lower():
-            print("Event loop error detected. Ensure LLM is initialized properly within async context.")
-        elif "429" in str(e):
-            print("Rate limit error detected. Consider implementing a delay.")
-        raise e
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 
-# Initialize FastAPI application with metadata
-app = FastAPI(
-    title="Documentation Generator API",
-    description="API for generating structured documentation from codebase using Gemini and Langchain",
-    version="1.0.0"
-)
-# Allow CORS for all origins (can change this if needed)
+from dotenv import load_dotenv
+load_dotenv()
+
+from . import db
+from .agent.loop import generate_docs_agent
+from .services.git_service import clone_repo, cleanup_repo
+
+# Ensure DB is initialized
+db.init_db()
+
+# In-memory event queues for SSE streams
+sse_queues: dict[int, asyncio.Queue] = {}
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Clean up SSE queues on shutdown."""
+    yield
+    sse_queues.clear()
+
+
+app = FastAPI(title="docSmith API", version="1.0.0", lifespan=lifespan)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -49,219 +40,146 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.middleware("http")
-async def handle_429_errors(request: Request, call_next):
-    try:
-        response = await call_next(request)
-        return response
-    except Exception as e:
-        if "429" in str(e):
-            return JSONResponse(
-                status_code=429,
-                content={
-                    "detail": "Resource exhausted. Please try again later.",
-                    "retry_after": "60"
-                }
-            )
-        raise e
 
-# Load environment variables
-load_dotenv()
-
-# Create a function to get the LLM instance within async context
-def create_llm():
-    return ChatGoogleGenerativeAI(
-        model="gemini-2.0-flash",
-        google_api_key=os.getenv("GOOGLE_API_KEY"),
-        temperature=0.1,
-        max_output_tokens=4096
-    )
+class GenerateRequest(BaseModel):
+    url: str
+    generation_type: str = "docs"
 
 
-# New API input model for GitHub URL
-class RepoURL(BaseModel):
-    url: HttpUrl
+class RegenerateRequest(BaseModel):
+    url: str
 
-import tempfile
-
-async def run_repomix(repo_url: str) -> str:
-    """
-    Run Repomix on a remote GitHub repository to generate a .txt file containing the codebase content.
-    """
-    try:
-        # Convert the URL to a string
-        repo_url = str(repo_url)
-
-        # Create a temporary directory for the output file
-        temp_dir = tempfile.mkdtemp()
-
-        # Define the path for the output .txt file
-        packed_file_path = os.path.join(temp_dir, "packed_codebase.txt")
-
-        # Run Repomix on the remote GitHub repository to create the .txt file
-        result = subprocess.run(
-            [
-                "repomix",
-                "--remote", repo_url,
-                "--output", packed_file_path
-            ],
-            check=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
-        )
-
-        if result.returncode != 0:
-            raise RuntimeError(f"Repomix failed: {result.stderr.decode()}")
-
-        # print(f"Packed codebase .txt file created at {packed_file_path}")
-
-        # Return the path to the packed .txt file
-        return packed_file_path
-
-    except subprocess.CalledProcessError as e:
-        raise RuntimeError(f"Error during Repomix execution: {str(e)}")
-    except Exception as e:
-        raise RuntimeError(f"Error in processing remote repository: {str(e)}")
-
-
-@app.post("/generate-docs-from-url")
-async def generate_docs_from_url(repo_url: RepoURL):
-    """
-    Generate documentation directly from a remote GitHub repository.
-    """
-    try:
-        normalized_url = str(repo_url.url).rstrip("/")
-        if not is_valid_github_url(normalized_url):
-            raise HTTPException(status_code=400, detail="Invalid GitHub repository URL.")
-
-        print(normalized_url)
-
-        # Run repomix with the remote URL to get the packed codebase as a .txt file
-        packed_file = await run_repomix(normalized_url)
-        
-        with open(packed_file, "r", encoding="utf-8") as f:
-            codebase_content = f.read()
-        
-        # Check the size and truncate if necessary
-        content_size = len(codebase_content)
-        print(f"Original codebase size: {content_size} characters")
-        
-        # Limit to approximately 900k characters (adjust as needed)
-        MAX_SIZE = 2000000
-        if content_size > MAX_SIZE:
-            print(f"Truncating codebase from {content_size} to {MAX_SIZE} characters")
-            codebase_content = codebase_content[:MAX_SIZE]
-            # Add a note about truncation
-            codebase_content += "\n\n[Note: This codebase was truncated due to size limitations.]"
-
-        # Create LLM instance within async context
-        llm = create_llm()
-        
-        dockerfile_prompt = PromptTemplate(
-            input_variables=["codebase"],
-            template=prompt_01
-        )
-        dockerfile_chain = dockerfile_prompt | llm
-        
-        # Use retry wrapper here
-        result = await retry_llm_call(dockerfile_chain, {"codebase": codebase_content})
-        return result.content
-
-    except Exception as e:
-        if "429" in str(e):
-            raise HTTPException(
-                status_code=429,
-                detail="Resource exhausted. Please try again later."
-            )
-        raise HTTPException(
-            status_code=500,
-            detail=f"Documentation generation failed: {str(e)}"
-        )
-
-@app.post("/generate-dockerfile")
-async def generate_dockerfile(repo_url: RepoURL):
-    """
-    Generate Dockerfile from a remote GitHub repository.
-    """
-    try:
-        normalized_url = str(repo_url.url).rstrip("/")
-        print(normalized_url)
-        if not is_valid_github_url(normalized_url):
-            raise HTTPException(status_code=400, detail="Invalid GitHub repository URL.")
-
-        packed_file = await run_repomix(normalized_url)
-        
-        with open(packed_file, "r", encoding="utf-8") as f:
-            codebase_content = f.read()
-
-        # Use prompt_04 for Dockerfile generation
-        dockerfile_prompt = PromptTemplate(
-            input_variables=["codebase"],
-            template=prompt_04
-        )
-        dockerfile_chain = dockerfile_prompt | create_llm()
-        
-        result = await dockerfile_chain.ainvoke({"codebase": codebase_content})
-        return result.content
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Dockerfile generation failed: {str(e)}"
-        )
-
-@app.post("/generate-docker-compose")
-async def generate_docker_compose(repo_url: RepoURL):
-    """
-    Generate Docker Compose configuration from a remote GitHub repository.
-    """
-    try:
-        normalized_url = str(repo_url.url).rstrip("/")
-        print(normalized_url)
-        if not is_valid_github_url(normalized_url):
-            raise HTTPException(status_code=400, detail="Invalid GitHub repository URL.")
-
-        packed_file = await run_repomix(normalized_url)
-        
-        with open(packed_file, "r", encoding="utf-8") as f:
-            codebase_content = f.read()
-
-        # Use prompt_05 for Docker Compose generation
-        compose_prompt = PromptTemplate(
-            input_variables=["codebase"],
-            template=prompt_05
-        )
-        compose_chain = compose_prompt | create_llm()
-        
-        result = await compose_chain.ainvoke({"codebase": codebase_content})
-        return result.content
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Docker Compose generation failed: {str(e)}"
-        )
 
 @app.get("/ping")
 async def ping():
-    """
-    A lightweight route to keep the server alive.
-    """
-    return {"message": "Pong!"}
-
-def is_valid_github_url(url: str) -> bool:
-    """Check if the URL is a valid GitHub repository link."""
-    # Updated pattern to accept URLs with optional .git suffix
-    pattern = r"^https://github\.com/[\w-]+/[\w-]+(?:\.git)?/?$"
-    return re.match(pattern, url) is not None
+    return {"status": "ok", "version": "1.0.0"}
 
 
+@app.post("/generate")
+async def generate(req: GenerateRequest):
+    """Start a new generation job."""
+    if req.generation_type not in ("docs", "dockerfile", "docker-compose"):
+        raise HTTPException(status_code=400, detail="generation_type must be docs, dockerfile, or docker-compose")
 
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True
-    )
+    try:
+        gen_id = db.create_generation(req.url, req.generation_type)
+    except Exception:
+        # UNIQUE constraint — reuse existing record
+        for g in db.list_generations():
+            if g["repo_url"] == req.url:
+                gen_id = g["id"]
+                db.update_status(gen_id, "pending")
+                break
+        else:
+            raise HTTPException(status_code=500, detail="Failed to create generation record")
+
+    sse_queues[gen_id] = asyncio.Queue()
+    asyncio.create_task(_run_agent(gen_id, req.url, req.generation_type))
+
+    return {"id": gen_id, "status": "pending"}
+
+
+@app.get("/stream/{gen_id}")
+async def stream(gen_id: int):
+    """SSE endpoint for agent progress events."""
+    if gen_id not in sse_queues:
+        gen = db.get_generation(gen_id)
+        if not gen:
+            raise HTTPException(status_code=404, detail="Generation not found")
+        sse_queues[gen_id] = asyncio.Queue()
+        if gen["status"] in ("done", "failed"):
+            await sse_queues[gen_id].put(json.dumps({"type": gen["status"], "content": gen["content"] or "Completed"}))
+
+    async def event_generator():
+        queue = sse_queues[gen_id]
+        while True:
+            try:
+                event = await asyncio.wait_for(queue.get(), timeout=60)
+                yield f"data: {event}\n\n"
+                if '"type":"done"' in event or '"type":"error"' in event:
+                    break
+            except asyncio.TimeoutError:
+                yield f"data: {json.dumps({'type':'ping'})}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+@app.get("/result/{gen_id}")
+async def result(gen_id: int):
+    """Return the generated content for a job."""
+    gen = db.get_generation(gen_id)
+    if not gen:
+        raise HTTPException(status_code=404, detail="Generation not found")
+    return {
+        "id": gen["id"],
+        "repo_url": gen["repo_url"],
+        "generation_type": gen["generation_type"],
+        "status": gen["status"],
+        "content": gen["content"],
+        "agent_log": json.loads(gen["agent_log"]) if gen["agent_log"] else [],
+        "created_at": gen["created_at"],
+        "updated_at": gen["updated_at"],
+    }
+
+
+@app.post("/regenerate/{gen_id}")
+async def regenerate(gen_id: int):
+    """Re-run the agent for an existing record, overwriting it."""
+    gen = db.get_generation(gen_id)
+    if not gen:
+        raise HTTPException(status_code=404, detail="Generation not found")
+
+    db.update_status(gen_id, "pending")
+    db.update_content(gen_id, "", "pending")
+
+    if gen_id not in sse_queues:
+        sse_queues[gen_id] = asyncio.Queue()
+    else:
+        while not sse_queues[gen_id].empty():
+            sse_queues[gen_id].get_nowait()
+
+    asyncio.create_task(_run_agent(gen_id, gen["repo_url"], gen["generation_type"]))
+    return {"id": gen_id, "status": "pending"}
+
+
+@app.get("/history")
+async def history():
+    """List all generation records."""
+    return db.list_generations()
+
+
+async def _run_agent(gen_id: int, url: str, gen_type: str):
+    """Pipeline: clone → agent → cleanup → save (deterministic steps)."""
+    repo_dir = f"/tmp/docsmith_repos/{gen_id}"
+
+    async def progress_callback(event_json: str):
+        if gen_id in sse_queues:
+            await sse_queues[gen_id].put(event_json)
+
+    # Step 1: Clone
+    db.update_status(gen_id, "running")
+    await progress_callback(json.dumps({"type": "cloning", "content": f"Cloning {url}..."}))
+
+    if not clone_repo(url, repo_dir):
+        await progress_callback(json.dumps({"type": "error", "content": f"Failed to clone {url}"}))
+        db.update_status(gen_id, "failed")
+        return
+
+    await progress_callback(json.dumps({"type": "cloned", "content": f"Repository cloned to {repo_dir}"}))
+
+    final_content = ""
+    try:
+        # Step 2: Agent (explore → read → generate)
+        final_content = await generate_docs_agent(url, gen_type, gen_id, progress_callback, repo_dir)
+    except Exception as e:
+        await progress_callback(json.dumps({"type": "error", "content": str(e)}))
+        db.update_status(gen_id, "failed")
+        return
+    finally:
+        # Step 3: Cleanup (deterministic — always runs)
+        cleanup_repo(repo_dir)
+        await progress_callback(json.dumps({"type": "cleaned", "content": "Repository cleaned up"}))
+
+    # Step 4: Save to DB
+    db.update_content(gen_id, final_content, "done")
+    await progress_callback(json.dumps({"type": "done", "content": "Generation complete!", "result": final_content[:500]}))

@@ -1,101 +1,167 @@
-# docSmith
-docSmith is an API designed to generate documentation, Dockerfiles, and Docker Compose configurations from a GitHub repository URL. It leverages the Gemini language model and Langchain to analyze the codebase and produce structured outputs.
-[<img width="1710" alt="Screenshot 2025-02-15 at 11 44 21 PM" src="https://github.com/user-attachments/assets/dafa0437-d067-41ef-97f4-c183721dae04" />](https://doc-smith.vercel.app/)
+# docSmith - Agentic Documentation Generator
 
-**Key Features:**
-*   **Documentation Generation:** Automatically generates comprehensive documentation for a given GitHub repository.
-*   **Dockerfile Generation:** Creates a Dockerfile tailored to the project's needs.
-*   **Docker Compose Generation:** Generates a Docker Compose configuration for multi-container applications.
-*   **API-Driven:** Provides a RESTful API for easy integration with other tools and services.
-**Supported Platforms/Requirements:**
-*   Python 3.7+
-*   FastAPI
-*   Langchain
-*   Google Gemini API
-*   Docker (for Dockerfile and Docker Compose generation)
-*   Node.js and npm (for Repomix installation)
-## Getting Started
-### Prerequisites
-Before you begin, ensure you have the following installed:
-*   **Python:** Version 3.7 or higher.
-*   **pip:** Python package installer.
-*   **Docker:** For generating and using Dockerfiles and Docker Compose configurations.
-*   **Node.js and npm:** Required for installing Repomix.
-*   **Google Cloud Account:** Required to access the Gemini API.
-*   **Git:** Required to clone the repository.
-### Installation
-1.  **Clone the repository:**
-    ```bash
-    git clone <repository_url>
-    cd <repository_directory>
-    ```
-2.  **Create a virtual environment (recommended):**
-    ```bash
-    python3 -m venv venv
-    source venv/bin/activate  # On Linux/macOS
-    venv\Scripts\activate  # On Windows
-    ```
-3.  **Install the backend dependencies:**
-    ```bash
-    cd backend
-    pip install -r requirements.txt
-    ```
-4.  **Set up environment variables:**
-    *   Create a `.env` file in the `backend` directory.
-    *   Add your Google API key:
-                GOOGLE_API_KEY=<your_google_api_key>
-        
-5.  **Install Repomix:**
-    ```bash
-    npm install -g repomix
-    ```
-    This script checks if Repomix is installed and installs it globally using npm if it's not already present.
-6.  **Install the frontend dependencies:**
-    ```bash
-    cd ../frontend
-    npm install
-    ```
-### Running the Application
-1.  **Start the backend server:**
-    ```bash
-    cd ../backend
-    uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-    ```
-    This command starts the FastAPI server on port 8000 with hot reloading enabled.
-2.  **Start the frontend application:**
-    ```bash
-    cd ../frontend
-    npm run dev
-    ```
-    This command starts the Vite development server, typically on port 5173.
+A FastAPI-based backend that uses AI agents to automatically generate documentation, Dockerfiles, and docker-compose files from Git repositories.
 
-## API Documentation
-The backend provides the following API endpoints:
-*   **`POST /generate-docs-from-url`:** Generates documentation from a GitHub repository URL.
-    *   **Input:**
-        ```json
-        {
-          "url": "https://github.com/username/repository"
-        }
-            *   **Output:** A string containing the generated documentation in Markdown format.
-*   **`POST /generate-dockerfile`:** Generates a Dockerfile from a GitHub repository URL.
-    *   **Input:**
-        ```json
-        {
-          "url": "https://github.com/username/repository"
-        }
-            *   **Output:** A string containing the generated Dockerfile.
-*   **`POST /generate-docker-compose`:** Generates a Docker Compose configuration from a GitHub repository URL.
-    *   **Input:**
-        ```json
-        {
-          "url": "https://github.com/username/repository"
-        }
-            *   **Output:** A string containing the generated Docker Compose configuration in YAML format.
-*   **`GET /ping`:** A lightweight route to keep the server alive.
-    *   **Output:**
-        ```json
-        {
-          "message": "Pong!"
-        }
-        
+## Tech Stack
+
+- **Python 3.10+**
+- **FastAPI** - Web framework
+- **SQLite** - Database (built-in)
+- **OpenRouter API** - LLM backend (free models with web search)
+- **GitPython** - Git operations
+- **LangChain** - Agent framework
+- **SSE** - Server-Sent Events for real-time progress
+
+## Project Structure
+
+```
+docsmith-rebuild/
+├── backend/
+│   ├── main.py              # FastAPI app & endpoints
+│   ├── db.py                # SQLite setup & operations
+│   ├── agent/
+│   │   ├── __init__.py
+│   │   ├── tools.py         # LangChain tools (bash, read, glob, grep, write)
+│   │   ├── loop.py          # Main agent loop
+│   │   └── prompts.py       # System & generation prompts
+│   └── services/
+│       ├── __init__.py
+│       ├── git_service.py   # Clone, file operations
+│       └── openrouter_service.py  # OpenRouter LLM client
+└── frontend-patch/
+    └── README.md            # Frontend integration instructions
+```
+
+## Setup
+
+### 1. Install Dependencies
+
+```bash
+pip install fastapi uvicorn langchain langchain-openai gitpython python-dotenv sse-starlette
+```
+
+### 2. Set Environment Variable
+
+```bash
+export OPENROUTER_API_KEY=your_openrouter_api_key_here
+```
+
+Get your free OpenRouter API key at: https://openrouter.ai/keys
+
+### 3. Run the Server
+
+```bash
+cd backend
+python main.py
+```
+
+Or with uvicorn:
+
+```bash
+uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+## API Endpoints
+
+### Health Check
+```
+GET /ping
+→ {"status": "ok", "version": "1.0.0"}
+```
+
+### Start Generation
+```
+POST /generate
+Body: {"url": "https://github.com/user/repo", "generation_type": "docs"}
+→ {"id": 1, "status": "pending"}
+```
+
+**generation_type** values: `docs`, `dockerfile`, `docker-compose`
+
+### Stream Progress (SSE)
+```
+GET /stream/{id}
+```
+Events:
+- `{"type": "cloning", "content": "Cloning..."}`
+- `{"type": "thinking", "content": "Exploring..."}`
+- `{"type": "reading", "content": "Reading..."}`
+- `{"type": "generating", "content": "Generating..."}`
+- `{"type": "done", "content": "...", "result": "..."}`
+- `{"type": "error", "content": "..."}`
+
+### Get Result
+```
+GET /result/{id}
+→ {"id": 1, "repo_url": "...", "generation_type": "docs", "status": "done", "content": "...", ...}
+```
+
+### Regenerate
+```
+POST /regenerate/{id}
+→ {"id": 1, "status": "pending"}
+```
+
+### History
+```
+GET /history
+→ [{"id": 1, "repo_url": "...", "generation_type": "...", "status": "...", ...}, ...]
+```
+
+## Example Usage
+
+```bash
+# Start generation
+curl -X POST http://localhost:8000/generate \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://github.com/facebook/react", "generation_type": "docs"}'
+
+# Stream progress (SSE)
+curl http://localhost:8000/stream/1
+
+# Get result
+curl http://localhost:8000/result/1
+
+# List history
+curl http://localhost:8000/history
+```
+
+## Agent Tools
+
+The agent has access to these tools:
+
+| Tool | Description |
+|------|-------------|
+| `bash` | Execute shell commands |
+| `read_file` | Read file contents |
+| `glob` | Find files matching pattern |
+| `grep` | Search for text in files |
+| `write_file` | Write content to file |
+
+## Workflow
+
+1. **Clone** - Repository is cloned to `/tmp/docsmith_repos/{id}/`
+2. **Explore** - Agent glob finds key files, reads configs
+3. **Generate** - LLM generates docs using repo context
+4. **Save** - Output saved to repo directory as `OUTPUT.md`
+
+## Database
+
+SQLite at `/tmp/docsmith.db`:
+
+```sql
+CREATE TABLE generations (
+    id INTEGER PRIMARY KEY,
+    repo_url TEXT UNIQUE,
+    generation_type TEXT,
+    content TEXT,
+    status TEXT DEFAULT 'pending',
+    agent_log TEXT,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
+);
+```
+
+## Frontend Integration
+
+See `frontend-patch/README.md` for React integration instructions.
